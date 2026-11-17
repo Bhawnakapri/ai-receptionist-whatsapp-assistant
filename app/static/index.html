@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Salon Studio | AI Receptionist</title>
+
+<style>
+:root {
+    font-family: Inter, Arial, sans-serif;
+    color: #292331;
+    background: #f7f4f7;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+}
+
+.top {
+    background: #33283b;
+    color: white;
+    padding: 25px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.top h1 {
+    font-size: 23px;
+    margin: 0;
+}
+
+.top span {
+    color: #e9c6d8;
+}
+
+.top small {
+    color: #e9c6d8;
+}
+
+.wrap {
+    max-width: 1250px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+button {
+    background: #86546f;
+    color: white;
+    border: none;
+    border-radius: 9px;
+    padding: 11px 17px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #68405a;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.card, .panel {
+    background: white;
+    border-radius: 15px;
+    padding: 21px;
+    box-shadow: 0 4px 18px #33283b0d;
+}
+
+.metric {
+    font-size: 30px;
+    font-weight: 700;
+    margin-top: 10px;
+}
+
+.muted {
+    color: #817887;
+    font-size: 13px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 20px;
+}
+
+h2 {
+    font-size: 18px;
+    margin-top: 0;
+}
+
+.chatlog {
+    height: 260px;
+    overflow-y: auto;
+    background: #faf8fa;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.msg {
+    padding: 9px 12px;
+    border-radius: 10px;
+    margin: 7px 0;
+    max-width: 90%;
+    white-space: pre-wrap;
+}
+
+.user {
+    background: #efe2eb;
+    margin-left: auto;
+}
+
+.bot {
+    background: #eeeaf1;
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+}
+
+.row input {
+    flex: 1;
+}
+
+input {
+    padding: 12px;
+    border: 1px solid #e5dce5;
+    border-radius: 8px;
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th, td {
+    padding: 13px 10px;
+    text-align: left;
+    border-bottom: 1px solid #eee8ee;
+}
+
+th {
+    color: #817887;
+    font-size: 12px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.badge {
+    padding: 5px 9px;
+    border-radius: 20px;
+    font-size: 12px;
+    background: #e5f5e9;
+    color: #23713c;
+}
+
+.cancelled {
+    background: #fde8e8;
+    color: #a33b3b;
+}
+
+.service-list {
+    line-height: 2;
+    padding-left: 20px;
+}
+
+.section {
+    margin-top: 20px;
+}
+
+.error {
+    color: #b33;
+}
+
+@media(max-width: 750px) {
+    .cards, .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .top, .heading {
+        display: block;
+    }
+
+    .heading button {
+        margin-top: 12px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header class="top">
+    <h1>✦ The Salon <span>Studio</span></h1>
+    <div>
+        <small>AI Receptionist Dashboard</small>
+    </div>
+</header>
+
+<main class="wrap">
+
+    <div class="heading">
+        <div>
+            <h2>Dashboard Overview</h2>
+            <div class="muted">Manage your salon operations</div>
+        </div>
+
+        <button onclick="loadDashboard()">↻ Refresh Dashboard</button>
+    </div>
+
+    <!-- Statistics -->
+
+    <section class="cards">
+
+        <div class="card">
+            <div class="muted">Available Services</div>
+            <div class="metric" id="serviceCount">—</div>
+        </div>
+
+        <div class="card">
+            <div class="muted">Total Customers</div>
+            <div class="metric" id="customerCount">—</div>
+        </div>
+
+        <div class="card">
+            <div class="muted">Total Appointments</div>
+            <div class="metric" id="appointmentCount">—</div>
+        </div>
+
+        <div class="card">
+            <div class="muted">Confirmed Appointments</div>
+            <div class="metric" id="confirmedCount">—</div>
+        </div>
+
+        <div class="card">
+            <div class="muted">Cancelled Appointments</div>
+            <div class="metric" id="cancelledCount">—</div>
+        </div>
+
+        <div class="card">
+            <div class="muted">System Status</div>
+            <div class="metric" id="systemStatus">Checking...</div>
+        </div>
+
+    </section>
+
+    <!-- Chat and Services -->
+
+    <section class="grid">
+
+        <div class="panel">
+
+            <h2>AI Receptionist</h2>
+
+            <p class="muted">
+                Interact with the salon's virtual receptionist.
+            </p>
+
+            <div class="chatlog" id="chatlog">
+                <div class="msg bot">
+                    Welcome to The Salon Studio!
+                    How can I help you today?
+                </div>
+            </div>
+
+            <div class="row">
+                <input
+                    id="chatInput"
+                    placeholder="Ask about services, prices or appointments"
+                    onkeydown="if(event.key==='Enter') sendChat()"
+                >
+
+                <button onclick="sendChat()">Send</button>
+            </div>
+
+            <p class="muted">
+                Current mode: Rule-based assistant
+            </p>
+
+        </div>
+
+        <div class="panel">
+
+            <h2>Our Services</h2>
+
+            <ul id="services" class="service-list">
+                <li>Loading services...</li>
+            </ul>
+
+            <p class="muted">
+                Manage services through the backend API.
+            </p>
+
+        </div>
+
+    </section>
+
+    <!-- Appointments -->
+
+    <section class="panel section">
+
+        <h2>Appointment Management</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>Customer</th>
+                        <th>Service</th>
+                        <th>Date & Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="appointments">
+                    <tr>
+                        <td colspan="5">Loading appointments...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+    <!-- Customers -->
+
+    <section class="panel section">
+
+        <h2>Customer Directory</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+
+                <tbody id="customers">
+                    <tr>
+                        <td colspan="4">Loading customers...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+</main>
+
+<script>
+
+let conversationId = null;
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+async function fetchData(endpoint) {
+    const response = await fetch(endpoint);
+
+    if (!response.ok) {
+        throw new Error("Failed to load " + endpoint);
+    }
+
+    return response.json();
+}
+
+async function loadDashboard() {
+
+    try {
+
+        const [services, customers, appointments] =
+            await Promise.all([
+                fetchData("/api/services"),
+                fetchData("/api/customers"),
+                fetchData("/api/appointments")
+            ]);
+
+        // Statistics
+
+        document.getElementById("serviceCount").textContent =
+            services.length;
+
+        document.getElementById("customerCount").textContent =
+            customers.length;
+
+        document.getElementById("appointmentCount").textContent =
+            appointments.length;
+
+        document.getElementById("confirmedCount").textContent =
+            appointments.filter(a => a.status === "confirmed").length;
+
+        document.getElementById("cancelledCount").textContent =
+            appointments.filter(a => a.status === "cancelled").length;
+
+        document.getElementById("systemStatus").textContent = "Online";
+
+        // Service lookup
+
+        const serviceMap = {};
+
+        services.forEach(service => {
+            serviceMap[service.id] = service.name;
+        });
+
+        // Customer lookup
+
+        const customerMap = {};
+
+        customers.forEach(customer => {
+            customerMap[customer.id] = customer.name;
+        });
+
+        // Services
+
+        document.getElementById("services").innerHTML =
+            services.map(service => `
+                <li>
+                    <b>${escapeHTML(service.name)}</b>
+                    — ₹${escapeHTML(service.price)}
+                    (${escapeHTML(service.duration_minutes)} min)
+                </li>
+            `).join("") || "<li>No services available.</li>";
+
+        // Appointments
+
+        const appointmentHTML = appointments
+            .slice()
+            .sort((a, b) =>
+                new Date(b.start_at) - new Date(a.start_at)
+            )
+            .map(appointment => {
+
+                const statusClass =
+                    appointment.status === "cancelled"
+                    ? "badge cancelled"
+                    : "badge";
+
+                return `
+                    <tr>
+                        <td>#${escapeHTML(appointment.id)}</td>
+
+                        <td>
+                            ${escapeHTML(
+                                customerMap[appointment.customer_id]
+                                || "Unknown"
+                            )}
+                        </td>
+
+                        <td>
+                            ${escapeHTML(
+                                serviceMap[appointment.service_id]
+                                || "Unknown"
+                            )}
+                        </td>
+
+                        <td>
+                            ${escapeHTML(
+                                new Date(appointment.start_at)
+                                .toLocaleString("en-IN")
+                            )}
+                        </td>
+
+                        <td>
+                            <span class="${statusClass}">
+                                ${escapeHTML(appointment.status)}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+
+        document.getElementById("appointments").innerHTML =
+            appointmentHTML ||
+            '<tr><td colspan="5">No appointments yet.</td></tr>';
+
+        // Customers
+
+        document.getElementById("customers").innerHTML =
+            customers.map(customer => `
+                <tr>
+                    <td>#${escapeHTML(customer.id)}</td>
+                    <td>${escapeHTML(customer.name)}</td>
+                    <td>${escapeHTML(customer.phone)}</td>
+                    <td>${escapeHTML(customer.email || "—")}</td>
+                </tr>
+            `).join("") ||
+            '<tr><td colspan="4">No customers yet.</td></tr>';
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById("systemStatus").textContent =
+            "Offline";
+
+        document.getElementById("systemStatus").classList.add("error");
+
+    }
+}
+
+
+// AI Chat
+
+async function sendChat() {
+
+    const input = document.getElementById("chatInput");
+
+    const text = input.value.trim();
+
+    if (!text) return;
+
+    const log = document.getElementById("chatlog");
+
+    const userMessage = document.createElement("div");
+
+    userMessage.className = "msg user";
+    userMessage.textContent = text;
+
+    log.appendChild(userMessage);
+
+    input.value = "";
+
+    try {
+
+        const response = await fetch("/api/chat", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+                message: text,
+
+                channel: "web",
+
+                conversation_id: conversationId
+
+            })
+
+        });
+
+        if (!response.ok) {
+            throw new Error("Chat request failed");
+        }
+
+        const data = await response.json();
+
+        conversationId = data.conversation_id;
+
+        const botMessage = document.createElement("div");
+
+        botMessage.className = "msg bot";
+
+        botMessage.textContent =
+            data.reply || "Sorry, something went wrong.";
+
+        log.appendChild(botMessage);
+
+        log.scrollTop = log.scrollHeight;
+
+        // Refresh dashboard after conversation
+
+        loadDashboard();
+
+    } catch (error) {
+
+        const botMessage = document.createElement("div");
+
+        botMessage.className = "msg bot";
+
+        botMessage.textContent =
+            "Unable to connect to the receptionist. Please try again.";
+
+        log.appendChild(botMessage);
+
+    }
+}
+
+
+// Initial dashboard load
+
+loadDashboard();
+
+</script>
+
+</body>
+</html>
