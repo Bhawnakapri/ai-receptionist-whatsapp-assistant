@@ -32,8 +32,8 @@ from .integrations.voice import make_twiml_response
 
 
 # Initialize database and default salon services
-async def reminder_scheduler():
 
+async def reminder_scheduler():
     timezone = ZoneInfo("Asia/Kolkata")
 
     while True:
@@ -49,10 +49,10 @@ async def reminder_scheduler():
             next_run += timedelta(days=1)
 
         wait_seconds = (next_run - now).total_seconds()
-
         await asyncio.sleep(wait_seconds)
 
-        db = next(get_db())
+        db_generator = get_db()
+        db = next(db_generator)
 
         try:
             count = await send_appointment_reminders(db)
@@ -62,40 +62,70 @@ async def reminder_scheduler():
             print(f"Reminder scheduler error: {exc}")
 
         finally:
-            db.close()
-async def reminder_scheduler():
-
-    timezone = ZoneInfo("Asia/Kolkata")
-
-    while True:
-        now = datetime.now(timezone)
-
-        next_run = datetime.combine(
-            now.date(),
-            time(10, 0),
-            tzinfo=timezone
-        )
-
-        if now >= next_run:
-            next_run += timedelta(days=1)
-
-        wait_seconds = (next_run - now).total_seconds()
-
-        await asyncio.sleep(wait_seconds)
-
-        db = next(get_db())
-
-        try:
-            count = await send_appointment_reminders(db)
-            print(f"Appointment reminders sent: {count}")
-
-        except Exception as exc:
-            print(f"Reminder scheduler error: {exc}")
-
-        finally:
-            db.close()
+            db_generator.close()
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+
+    appointment_columns = [
+        column["name"]
+        for column in inspect(engine).get_columns("appointments")
+    ]
+
+    if "reminder_sent" not in appointment_columns:
+        with engine.begin() as connection:
+            connection.execute(text(
+                "ALTER TABLE appointments "
+                "ADD COLUMN reminder_sent BOOLEAN NOT NULL DEFAULT 0"
+            ))
+
+    db = next(get_db())
+
+    try:
+        if not db.scalar(select(models.Service).limit(1)):
+            db.add_all([
+                models.Service(
+                    name="Haircut",
+                    description="Professional haircut and styling",
+                    price=500,
+                    duration_minutes=45
+                ),
+                models.Service(
+                    name="Hair Spa",
+                    description="Relaxing hair spa treatment",
+                    price=1200,
+                    duration_minutes=60
+                ),
+                models.Service(
+                    name="Hair Colour",
+                    description="Professional hair colouring",
+                    price=2500,
+                    duration_minutes=120
+                ),
+                models.Service(
+                    name="Facial",
+                    description="Skin cleansing and facial treatment",
+                    price=1000,
+                    duration_minutes=60
+                )
+            ])
+            db.commit()
+
+    finally:
+        db.close()
+
+    scheduler_task = asyncio.create_task(reminder_scheduler())
+
+    yield
+
+    scheduler_task.cancel()
+
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
 # Create FastAPI application
 app = FastAPI(
     title="AI Receptionist & WhatsApp Assistant",
@@ -622,17 +652,17 @@ def reschedule_appointment(
             detail=str(exc)
         )
     @app.post("/api/reminders/run")
-async def run_reminders(db: Session = Depends(get_db)):
-    try:
-        count = await send_appointment_reminders(db)
+    async def run_reminders(db: Session = Depends(get_db)):
+        try:
+            count = await send_appointment_reminders(db)
 
-        return {
-            "message": "Reminder process completed.",
-            "reminders_sent": count
-        }
+            return {
+                "message": "Reminder process completed.",
+                "reminders_sent": count
+            }
 
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=str(exc)
-        )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=str(exc)
+            )
